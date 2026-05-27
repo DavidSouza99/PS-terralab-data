@@ -10,7 +10,7 @@ Ao final das 5 sprints, o trainee será capaz de compreender e aplicar os princi
 
 ## Trainee
 
-**David Nascimento** · [@DavidSouza99](https://github.com/DavidSouza99) · david.nascimento@aluno.ufop.br
+**David Souza do Nascimento** · [@DavidSouza99](https://github.com/DavidSouza99) · david.nascimento@aluno.ufop.br
 
 ---
 
