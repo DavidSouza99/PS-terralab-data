@@ -1,0 +1,156 @@
+#Yalm não aceita tabulações, apenas espaços
+
+#Sem aspas - pode causa ambiguidade
+# password: minha@senha123
+
+#Com aspas - recomendado para evitar ambiguidade (seguro)
+# password: 'minha@senha123'
+
+#Com aspas duplas - interpreta \n e \t etc.
+# message: "Hello\nWorld"
+#
+#version: '3.8' # versao de especificação do compose
+#
+#x-minha-ancora: &ancora # extensoes (x-) - usadas para reutilizar blocos de configuracao
+#  campo: valor
+#
+#services: # OBRIGATORIO- define os serviços (containers) que serão executados
+#  nome-do-servico: # nome do serviço (container)
+#    image: nome-da-imagem:tag # imagem do container (pode ser local ou do Docker Hub)
+#    ports: # mapeamento de portas
+#      - "80:80" # formato: "host_port:container_port"
+#
+#    environment: # variáveis de ambiente
+#    ------ formato mapa -------
+#        POSTGRES_USER: admin
+#        POSTGRES_PASSWORD: senha123
+#        POSTGRES_DB: meu_banco
+#    ------ formato lista -------
+#        -  POSTGRES_USER=admin
+#        -  POSTGRES_PASSWORD=senha123
+#    ------ Referenciado variáveis no arquivo .env -------
+#        POSTGRES_USER=${POSTGRES_USER}
+#        POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+#
+#      - VARIAVEL=valor
+#    volumes: # mapeamento de volumes
+#      - ./host_path:/container_path # formato: "host_path:container_path"
+#    depends_on: # dependências entre serviços
+#      - outro-servico
+#
+#volumes: # definição de volumes nomeados
+#  
+#     Bind mount: ./pasta_local:/caminho/no/container
+#    - ./dags:/opt/airflow/dags
+#    - ./logs:/opt/airflow/logs
+# 
+#     Named volume: nome_volume:/caminho/no/container
+#    - postgres_data:/var/lib/postgresql/data
+# 
+#     Somente leitura (read-only) — o container não pode escrever
+#    - ./config:/etc/app/config:ro
+#  
+#networks: # definição de redes personalizadas
+#  nome-da-rede:
+#    
+#configs:
+#  nome-da-config:
+#    file: ./caminho/para/arquivo.conf # caminho para o arquivo de configuração
+#
+#command: webserver
+ 
+# Comando com múltiplos argumentos
+#command: ['sh', '-c', 'airflow db migrate && airflow webserver']
+
+version: '3.8'
+
+x-airflow-comum: &airflow-comum # o prefixo x- é uma conveção para extensoes (ignorado pelo Compose)
+  image: apache/airflow:2.9.1
+  environment:
+    - AIRFLOW__CORE__EXECUTOR=LocalExecutor # executor recomendado para produção, mas pode ser usado em desenvolvimento
+    - AIRFLOW__CORE__LOAD_EXAMPLES=false # desabilita os DAGs de exemplo para evitar confusão
+    - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB} # string de conexão para o Airflow se conectar ao PostgreSQL
+    - _PIP_ADDITIONAL_REQUIREMENTS=psycopg2-binary # necessário para o Airflow se conectar ao PostgreSQL
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+  user: '50000:0' # executa o container com um usuário não root (50000) e grupo 0 (root) para evitar problemas de permissão, o airflow exige que o usuário tenha ID 50000 para funcionar corretamente
+  depends_on:
+    postgres:
+      condition: service_healthy # Garante que o Airflow só inicie após o PostgreSQL estar saudável
+services:
+  postgres:
+    image: postgres:15
+    container_name: terralab_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', '${POSTGRES_USER}', '-d', '${POSTGRES_DB}'] #Comando executado dentro co container para verificar se o serviço está saudável
+      interval: 10s # Intervalo entre as verificações de saúde
+      retries: 5 # Número de tentativas antes de considerar o serviço como não saudável
+      start_period: 5s # Tempo de espera antes de iniciar as verificações de saúde
+  
+  airflow-webserver:
+    <<: *airflow-comum # herda as configurações comuns do Airflow
+    container_name: terralab_airflow_webserver
+    command: webserver
+    ports:
+      - "8080:8080" # mapeia a porta 8080 do container para a porta 8080 do host, permitindo acesso à interface web do Airflow
+      # Quando saber qual porta usar? A porta 8080 é a porta padrão do Airflow Webserver, mas pode ser configurada para outra porta se necessário. Certifique-se de que a porta escolhida não esteja em uso por outro serviço no host.
+    healthcheck:
+      test: ['CMD', 'curl', '--fail', 'http://localhost:8080/health'] 
+      # CDM serve para verificar se o Airflow Webserver está respondendo corretamente. Ele tenta acessar a URL de saúde do Airflow e espera uma resposta bem-sucedida (código 200). Se a resposta for bem-sucedida, o serviço é considerado saudável; caso contrário, ele é considerado não saudável.
+      # curl faz uma requisição HTTP para a URL
+      # --fail faz com que o comando retorne um código de erro se a resposta nao for bem-sucedida (código 200), o que é útil para o healthcheck
+      # Verifica se o Airflow Webserver está respondendo na porta 8080
+      interval: 10s # Intervalo entre as verificações de saúde
+      timeout: 10s # Tempo máximo para aguardar uma resposta do serviço durante a verificação de saúde
+      retries: 5 # Número de tentativas antes de considerar o serviço como não saudável
+      start_period: 30s # Tempo de espera antes de iniciar as verificações de saúde, dando tempo para o Airflow Webserver iniciar completamente
+    restart: unless-stopped # reinicia o container automaticamente se ele parar, mas não reinicia se o container for parado manualmente
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully # Garante que o Airflow Webserver só inicie após a tarefa de inicialização do Airflow ser concluída com sucesso
+  
+  airflow-init:
+    <<: *airflow-comum # herda as configurações comuns do Airflow
+    container_name: terralab_airflow_init
+    entrypoint: /bin/bash
+    # -c é necessário para executar múltiplos comandos em sequência dentro do container
+    # - | é usado para escrever comandos em múltiplas linhas de forma mais legível
+    # airflow db migrate é necessário para criar as tabelas do Airflow no banco de dados
+    # airflow users create \ é necessário para criar um usuário admin para acessar a interface do Airflow e o \ é usado para quebrar a linha e continuar o comando na próxima linha
+    # --username, --password, --firstname, --lastname, --role e --email são os parâmetros necessários para criar o usuário admin do Airflow
+    command: 
+             - -c
+             - |
+                airflow db migrate 
+                airflow users create \
+                  --username ${AIRFLOW_USER} \
+                  --password ${AIRFLOW_PASSWORD} \
+                  --firstname Admin --lastname Terralab \
+                  --role Admin --email ${AIRFLOW_EMAIL}
+    restart: "no" # não reinicia o container após a execução do comando, pois é uma tarefa única de inicialização
+    depends_on:
+      postgres:
+        condition: service_healthy # Garante que a inicialização do Airflow só ocorra após o PostgreSQL estar saudável
+
+  airflow-scheduler:
+    <<: *airflow-comum # herda as configurações comuns do Airflow
+    container_name: terralab_airflow_scheduler
+    command: scheduler
+    restart: unless-stopped # reinicia o container automaticamente se ele parar, mas não reinicia se o container for parado manualmente
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully # Garante que o Airflow Scheduler só inicie após a tarefa de inicialização do Airflow ser concluída com sucesso
+
+volumes:
+  postgres_data:
+    driver: local
