@@ -67,11 +67,13 @@ version: '3.8'
 x-airflow-comum: &airflow-comum # o prefixo x- é uma conveção para extensoes (ignorado pelo Compose)
   image: apache/airflow:2.9.1
   environment:
+    - AIRFLOW_CONN_POSTGRES_DEFAULT=postgresql://terralab:terralab123@postgres:5432/terralab_db
     - AIRFLOW__CORE__EXECUTOR=LocalExecutor # executor recomendado para produção, mas pode ser usado em desenvolvimento
     - AIRFLOW__CORE__LOAD_EXAMPLES=false # desabilita os DAGs de exemplo para evitar confusão
     - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB} # string de conexão para o Airflow se conectar ao PostgreSQL
     - _PIP_ADDITIONAL_REQUIREMENTS=psycopg2-binary # necessário para o Airflow se conectar ao PostgreSQL
   volumes:
+    - ./data:/opt/airflow/data
     - ./dags:/opt/airflow/dags
     - ./logs:/opt/airflow/logs
     - ./plugins:/opt/airflow/plugins
