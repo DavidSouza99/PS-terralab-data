@@ -71,7 +71,7 @@ x-airflow-comum: &airflow-comum # o prefixo x- é uma conveção para extensoes 
     - AIRFLOW__CORE__EXECUTOR=LocalExecutor # executor recomendado para produção, mas pode ser usado em desenvolvimento
     - AIRFLOW__CORE__LOAD_EXAMPLES=false # desabilita os DAGs de exemplo para evitar confusão
     - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB} # string de conexão para o Airflow se conectar ao PostgreSQL
-    - _PIP_ADDITIONAL_REQUIREMENTS=psycopg2-binary # necessário para o Airflow se conectar ao PostgreSQL
+    - _PIP_ADDITIONAL_REQUIREMENTS=psycopg2-binary shapely pyarrow # necessário para o Airflow se conectar ao PostgreSQL
   volumes:
     - ./data:/opt/airflow/data
     - ./dags:/opt/airflow/dags
