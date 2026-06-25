@@ -71,10 +71,15 @@ with DAG(
         
         mascara = df.apply(ponto_dentro_estado, axis=1)
         print(f"Pontos fora da UF removidos: {(~mascara).sum()}")
-        df = df[mascara]
-        print(f"Linhas após filtrar pontos fora da UF: {len(df)}")
+        df['dentro_uf'] = mascara
 
         # 4. Salvar o resultado parcial como parquet
+        hook = PostgresHook(postgres_conn_id='postgres_default')
+        engine = hook.get_sqlalchemy_engine()
+        df.to_sql('enderecos_dashboard', con=engine, if_exists='replace', index=False)
+        print(f"Tabela enderecos_dashboard salva foda da UF: {len(df)} linhas.")
+
+        df = df[mascara]
         df.to_parquet('/opt/airflow/data/dados_processo_seletivo_transformado.parquet', index=False)
 
     # ── Tarefa 2: Salvar no PostgreSQL ─────────────────────────────────
