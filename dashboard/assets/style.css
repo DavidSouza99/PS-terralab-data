@@ -1,0 +1,73 @@
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: #f5f4f0;
+    margin: 0;
+}
+
+.header-section{
+    background-color: #1a3b2a;
+    color: #f1f1f1;
+    padding: 40px 60px;
+}
+
+.header-coords{
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: #a0bfad;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+}
+
+.header-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 48px;
+    font-weight: 700;
+    color: #f1f1f1;
+    margin-bottom: 12px;
+}
+
+.header-subtitle{
+    font-size: 16px;
+    color: #c0d8ca;
+    max-width: 600px;
+    margin-bottom: 32px;
+}
+
+.metrics-row{
+    /* ativa o layout flex */
+    display: flex;
+    /* gap define o espaçamento entre itens dentro do container */
+    gap: 16px;
+    /* Controla se os itens flex devem quebrar para outra linha, o wrap informa que eles vão para a próxima linha se não couberem */
+    flex-wrap: wrap;
+}
+
+.metric-card{
+    background-color: rgba(255,255,255, 0.1);
+    border-radius: 12px;
+    padding: 16px 24px;
+    display: flex;
+    /* flex-direction controla a direção principal do layout enquanto o wrap controla se os itens continuam em uma só linha ou se quebram em várias */
+    flex-direction: column;
+    min-width: 130px;
+}
+
+.metric-value{
+    font-size: 28px;
+    font-weight: 700;
+    color: #f1f1f1
+}
+
+.metric-label {
+    font-size: 12px;
+    color: #a0bfad;
+    margin-top: 4px;
+}
+
+.content-section{
+    padding: 32px 60px;
+}
+
+.tab-content-area{
+    margin-top: 24px;
+}
